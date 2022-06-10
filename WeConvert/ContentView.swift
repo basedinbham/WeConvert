@@ -11,57 +11,17 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var userInput = 0.0
-    @State private var originalUnit = "°F"
-    @State private var convertedUnit = "°C"
+    @State private var originalUnit = UnitTemperature.celsius
+    @State private var convertedUnit = UnitTemperature.fahrenheit
+    @FocusState private var userInputIsFocused: Bool
     
-    let unitsOfMeasurement = ["°F", "°C", "°K"]
+    let units: [UnitTemperature] = [.celsius, .fahrenheit, .kelvin]
+    let formatter: MeasurementFormatter
     
-    var cToF: Double {
-        (userInput * 9 / 5 + 32)
-    }
-    var fToC: Double {
-        ((userInput - 32) * 5) / 9
-    }
-    var fToK: Double {
-        ((userInput - 32) * 5) / 9 + 273.15
-    }
-    
-    var kToF: Double {
-        (userInput - 273.15) * 9 / 5 + 32
-    }
-    
-    var cToK: Double {
-        userInput + 273.15
-    }
-    
-    var kToC : Double {
-        userInput - 273.15
-    }
-    
-    var finalConvertedValue: Double {
-        switch (originalUnit, convertedUnit) {
-        case ("°F", "°C"):
-            return fToC
-        case ("°F", "°K"):
-            return fToK
-        case ("°F", "°F"):
-            return userInput
-        case ("°C", "°F"):
-            return cToF
-        case ("°C", "°K"):
-            return cToK
-        case ("°C", "°C"):
-            return userInput
-        case ("°K", "°F"):
-            return kToF
-        case ("°K", "°C"):
-            return kToC
-        case ("°K", "°K"):
-            return userInput
-        default:
-            print("Uh-oh")
-        }
-        return 0.0
+    var result: String {
+        let inputMeasurement = Measurement(value: userInput, unit: originalUnit)
+        let outputMeasurement = inputMeasurement.converted(to: convertedUnit)
+        return formatter.string(from: outputMeasurement)
     }
     
     var body: some View {
@@ -71,12 +31,15 @@ struct ContentView: View {
                     TextField("Temperature", value: $userInput, format:
                     .number)
                     .keyboardType(.decimalPad)
+                    .focused($userInputIsFocused)
+                } header: {
+                    Text("Temperature to Convert")
                 }
                 
                 Section {
                     Picker("Starting Unit Of Measurement", selection: $originalUnit) {
-                        ForEach(unitsOfMeasurement, id: \.self) {
-                            Text($0)
+                        ForEach(units, id: \.self) {
+                            Text(formatter.string(from: $0).capitalized)
                         }
                     }
                     .pickerStyle(.segmented)
@@ -86,8 +49,8 @@ struct ContentView: View {
                 
                 Section {
                     Picker("Converting Unit To", selection: $convertedUnit) {
-                        ForEach(unitsOfMeasurement, id: \.self) {
-                            Text($0)
+                        ForEach(units, id: \.self) {
+                            Text(formatter.string(from: $0).capitalized)
                         }
                     }
                     .pickerStyle(.segmented)
@@ -96,13 +59,28 @@ struct ContentView: View {
                 }
                 
                 Section {
-                    Text(finalConvertedValue, format: .number)
+                    Text(result)
                 } header : {
                     Text("Converted Unit Of Measurement")
                 }
             }
             .navigationTitle("WeConvert")
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        userInputIsFocused = false
+                    }
+                }
+            }
         }
+    }
+    // Create and config measurement formatter
+    init() {
+        formatter = MeasurementFormatter()
+        // Use the one we're telling you to use
+        formatter.unitOptions = .providedUnit
+        formatter.unitStyle = .short
     }
 }
 
